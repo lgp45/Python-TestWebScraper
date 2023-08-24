@@ -1,0 +1,79 @@
+import tkinter as tk
+from bs4 import BeautifulSoup
+import requests
+
+def scrape():
+    url = url_entry.get()
+    if not (url.startswith("http://") or url.startswith("https://")):
+        url = "http://" + url
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, "html.parser")
+    tags = set([tag.name for tag in soup.find_all()])
+    tags_string = '\n'.join(tags)
+    result_text.delete("1.0", tk.END)
+    for tag in tags:
+        result_text.insert(tk.END, tag + "\n", tag)
+        result_text.tag_bind(tag, "<1>", lambda event, tag=tag: show_tag(tag, soup))
+    search_button.config(command=lambda: search(tags_string, soup))
+
+    tag_List_Window
+def show_tag(tag, soup):
+    tag_info.config(text=f"You clicked on: {tag}")
+    
+    tag_List_Window.delete("1.0", tk.END)
+    tag_List_Window.insert(tk.END, f"Information about tag: {tag}\n")
+    for element in soup.find_all(tag):
+        classes = element.attrs.get("class")
+        if classes:
+            tag_List_Window.insert(tk.END, f"Classes: {', '.join(classes)}\n")
+        for attr, value in element.attrs.items():
+            if attr != "class":
+                tag_List_Window.insert(tk.END, f"{attr}: {value}\n")
+
+                
+#Begin main program execution
+root = tk.Tk()
+root.title("Web Scraper")
+
+url_label = tk.Label(root, text="Enter URL:")
+url_label.pack
+url_entry = tk.Entry(root)
+url_entry.pack()
+
+scrape_button = tk.Button(root, text="Scrape", command=scrape)
+scrape_button.pack()
+
+result_text = tk.Text(root)
+result_text.pack()
+
+# Create a scrollbar for the result_text
+scrollbar = tk.Scrollbar(root)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+result_text.config(yscrollcommand=scrollbar.set)
+scrollbar.config(command=result_text.yview)
+
+# Create a search bar
+search_var = tk.StringVar()
+search_entry = tk.Entry(root, textvariable=search_var)
+search_entry.pack()
+search_button = tk.Button(root, text="Search", command=lambda: search(tags_string, soup))
+search_button.pack()
+
+def search(tags_string, soup):
+    search_term = search_var.get().lower()
+    tags_list = tags_string.lower().split('\n')
+    filtered_tags = [tag for tag in tags_list if search_term in tag]
+    result_text.delete("1.0", tk.END)
+    for tag in filtered_tags:
+        result_text.insert(tk.END, tag + "\n", tag)
+        result_text.tag_bind(tag, "<1>", lambda event, tag=tag: show_tag(tag, soup))
+
+# Create a label to display the tag information
+tag_info = tk.Label(root, text="")
+tag_info.pack()
+
+# Create a new text window
+tag_List_Window = tk.Text(root, height=10, width=50)
+tag_List_Window.pack()
+
+root.mainloop()
